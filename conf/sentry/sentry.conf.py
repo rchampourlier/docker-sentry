@@ -94,7 +94,7 @@ SENTRY_URL_PREFIX = "http://localhost:9000" # No trailing slash!
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 USE_X_FORWARDED_HOST = True
 
-SENTRY_WEB_HOST = '127.0.0.1'
+SENTRY_WEB_HOST = '0.0.0.0'
 SENTRY_WEB_PORT = 9000
 SENTRY_WEB_OPTIONS = {
     'workers': 3,  # the number of gunicorn workers
@@ -103,7 +103,7 @@ SENTRY_WEB_OPTIONS = {
     'worker_class': 'gevent',
 }
 
-SENTRY_UDP_HOST = '127.0.0.1'
+SENTRY_UDP_HOST = '0.0.0.0'
 SENTRY_UDP_PORT = 9001
 
 #################
