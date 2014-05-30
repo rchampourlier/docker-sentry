@@ -119,48 +119,39 @@ mkdir /nginx
 mkdir /nginx/log
 mkdir /nginx/sites-enabled
 echo "
-http {
-  # we limit both on IP (single machine) as well as project ID
-  limit_req_zone  $binary_remote_addr  zone=one:10m   rate=3r/s;
-  limit_req_zone  $projectid  zone=two:10m   rate=3r/s;
+server {
+  listen            80;
+  server_name       <your.hostname>;
 
-  # limit_req_status requires nginx 1.3.15 or newer
-  limit_req_status 429;
+  proxy_set_header  Host              \$host;
+  proxy_set_header  X-Real-IP         \$remote_addr;
+  proxy_set_header  X-Forwarded-For   \$proxy_add_x_forwarded_for;
+  proxy_set_header  X-Forwarded-Proto \$scheme;
+  proxy_redirect    off;
 
-  server {
-    listen            80;
-    server_name       <your.hostname>;
+  # keepalive + raven.js is a disaster
+  keepalive_timeout 0;
 
-    proxy_set_header  Host              \$host;
-    proxy_set_header  X-Real-IP         \$remote_addr;
-    proxy_set_header  X-Forwarded-For   \$proxy_add_x_forwarded_for;
-    proxy_set_header  X-Forwarded-Proto \$scheme;
-    proxy_redirect    off;
+  # use very aggressive timeouts
+  proxy_read_timeout 5s;
+  proxy_send_timeout 5s;
+  send_timeout 5s;
+  resolver_timeout 5s;
+  client_body_timeout 5s;
 
-    # keepalive + raven.js is a disaster
-    keepalive_timeout 0;
+  # buffer larger messages
+  client_max_body_size 150k;
+  client_body_buffer_size 150k;
 
-    # use very aggressive timeouts
-    proxy_read_timeout 5s;
-    proxy_send_timeout 5s;
-    send_timeout 5s;
-    resolver_timeout 5s;
-    client_body_timeout 5s;
+  location / {
+    proxy_pass        http://localhost:9000;
+  }
 
-    # buffer larger messages
-    client_max_body_size 150k;
-    client_body_buffer_size 150k;
+  location ~* /api/(?P<projectid>\d+/)?store/ {
+    proxy_pass        http://localhost:9000;
 
-    location / {
-      proxy_pass        http://localhost:9000;
-    }
-
-    location ~* /api/(?P<projectid>\d+/)?store/ {
-      proxy_pass        http://localhost:9000;
-
-      limit_req   zone=one  burst=3  nodelay;
-      limit_req   zone=two  burst=10  nodelay;
-    }
+    limit_req   zone=one  burst=3  nodelay;
+    limit_req   zone=two  burst=10  nodelay;
   }
 }
 " > /nginx/sites-enabled/docker-sentry.conf
