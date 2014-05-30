@@ -22,7 +22,7 @@ RUN pip install eventlet
 RUN pip install django-bcrypt
 RUN pip install psycopg2 
 
-ADD sentry.conf.py /opt/sentry.conf.py
+ADD conf/sentry/sentry.conf.py /opt/sentry.conf.py
 
 EXPOSE 9000/tcp 9001/udp
 
