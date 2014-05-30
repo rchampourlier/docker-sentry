@@ -129,7 +129,7 @@ http {
 
   server {
     listen            80;
-    server_name       sentry.jobteaser.net;
+    server_name       <your.hostname>;
 
     proxy_set_header  Host              \$host;
     proxy_set_header  X-Real-IP         \$remote_addr;
