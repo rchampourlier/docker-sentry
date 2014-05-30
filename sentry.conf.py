@@ -86,6 +86,8 @@ DATABASES = {
 ## Web Server ##
 ################
 
+ALLOWED_HOSTS = [os.environ.get('URL_PREFIX', "")]
+
 # You MUST configure the absolute URI root for Sentry:
 SENTRY_URL_PREFIX = os.environ.get('URL_PREFIX', "") # No trailing slash!
 
