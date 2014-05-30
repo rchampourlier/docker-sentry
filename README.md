@@ -29,7 +29,11 @@ machine through Docker-magic!
 git clone https://github.com/rchampourlier/docker-sentry.git
 cd docker-sentry
 cp -Rf conf /
-# Edit the configuration files in /conf if you need to.
+# Edit the configuration files in /conf if you need to. At least, be sure to
+# change the value of `SECRET_KEY` in `/conf/sentry/sentry.conf.py`.
+
+# Dependencies
+apt-get install pwgen -y
 
 docker run -v /data --name sentry-postgresql-data busybox true
 docker run -d --name="sentry-postgresql" -e USER="sentry" -e DB="sentry" -e PASS="$(pwgen -s -1 16)" -v /var/log/postgresql:/var/log/postgresql --volumes-from=sentry-postgresql-data rchampourlier/postgresql
@@ -38,7 +42,7 @@ docker run -d --name="sentry-app" -v /conf/sentry:/opt --link sentry-postgresql:
 # The first time, we create the Sentry superuser
 docker run -i -t --rm --link sentry-postgresql:db rchampourlier/sentry createsuperuser
 
-docker run -d --name=nginx -p 80:80 -p 443:443 -v /conf/nginx:/etc/nginx/sites-templates -v /nginx/log:/var/log/nginx shepmaster/nginx-template-image
+docker run -d --name=nginx -p 80:80 -p 443:443 -v /conf/nginx:/etc/nginx/sites-templates -v /nginx/log:/var/log/nginx --link sentry-app:sentry shepmaster/nginx-template-image
 ```
 
 
