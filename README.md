@@ -146,13 +146,6 @@ server {
   location / {
     proxy_pass        http://localhost:9000;
   }
-
-  location ~* /api/(?P<projectid>\d+/)?store/ {
-    proxy_pass        http://localhost:9000;
-
-    limit_req   zone=one  burst=3  nodelay;
-    limit_req   zone=two  burst=10  nodelay;
-  }
 }
 " > /nginx/sites-enabled/docker-sentry.conf
 ```
