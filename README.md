@@ -8,13 +8,6 @@ A mix of:
 
 Configured to work with a PostgreSQL database and a Nginx reverse-proxy.
 
-
-## Current status
-
-This is not working, I can't make Nginx connect to the upstream Sentry
-app... it always returns "502 BAD GATEWAY"... Help needed!
-
-
 ## Tutorial
 
 ### Purpose
@@ -30,72 +23,74 @@ The whole tutorial will guide you into making Sentry available on a public
 machine through Docker-magic!
 
 
-### Short version (just the commands)
-
-Unless you've already done it with the long version, I recommend you skip
-to the next chapter before running this in your terminal!
+### Short version
 
 ```
-docker run -v /var/log/postgresql -v /data --name sentry-postgresql-data busybox true
-docker run -d --name="sentry-postgresql" -e USER="sentry" -e DB="sentry" -e PASS="$(pwgen -s -1 16)" --volumes-from=sentry-postgresql-data rchampourlier/postgresql
-docker run -d --name "sentry-app" -e URL_PREFIX="http://<your-hostname>" -p 127.0.0.1:9000:9000 --link sentry-postgresql:db rchampourlier/sentry start http
+git clone https://github.com/rchampourlier/docker-sentry.git
+cd docker-sentry
+cp -Rf conf /
+# Edit the configuration files in /conf if you need to.
 
-# Create Sentry super-user (only the first time)
+docker run -v /data --name sentry-postgresql-data busybox true
+docker run -d --name="sentry-postgresql" -e USER="sentry" -e DB="sentry" -e PASS="$(pwgen -s -1 16)" -v /var/log/postgresql:/var/log/postgresql --volumes-from=sentry-postgresql-data rchampourlier/postgresql
+docker run -d --name="sentry-app" -v /conf/sentry:/opt --link sentry-postgresql:db rchampourlier/sentry start http
+
+# The first time, we create the Sentry superuser
 docker run -i -t --rm --link sentry-postgresql:db rchampourlier/sentry createsuperuser
 
-docker run -d --name=nginx -p 80:80 -p 443:443 -v /nginx/sites-enabled:/etc/nginx/sites-enabled -v /nginx/log:/var/log/nginx dockerfile/nginx
+docker run -d --name=nginx -p 80:80 -p 443:443 -v /conf/nginx:/etc/nginx/sites-templates -v /nginx/log:/var/log/nginx shepmaster/nginx-template-image
 ```
 
 
 ### Detailed version
 
-#### 1. Create the volume containers
+
+#### 1. Setup configuration
+
+Configuration for Sentry and Nginx will be provided by the host in the
+`/conf` directory.
 
 ```
-docker run -v /var/log/postgresql -v /data --name sentry-postgresql-data busybox true
+git clone https://github.com/rchampourlier/docker-sentry.git
+cd docker-sentry
+cp -Rf conf /
 ```
 
-(These commands create a container which returns instantly. There is nothing to run,
-but the volume container is ready for use.)
+If you need to customize the configuration, edit the files in `/conf`.
 
-#### 2. Run PostgreSQL
+
+#### 2. Create the volume container
+
+```
+docker run -v /data --name sentry-postgresql-data busybox true
+```
+
+This command creates a container which will store our PostgreSQL data.
+
+
+#### 3. Run PostgreSQL
 
 We run PostgreSQL with the specified database, user and password. The
 PostgreSQL data is handled by the volumes container we just created.
 
 ```
-docker run -d --name="sentry-postgresql" -p 127.0.0.1:5432:5432 -e USER="sentry" -e DB="sentry" -e PASS="$(pwgen -s -1 16)" --volumes-from=sentry-postgresql-data rchampourlier/postgresql
+docker run -d --name="sentry-postgresql" -e USER="sentry" -e DB="sentry" -e PASS="$(pwgen -s -1 16)" -v /var/log/postgresql:/var/log/postgresql --volumes-from=sentry-postgresql-data rchampourlier/postgresql
 ```
 
 Details:
 
 - we run the container in the background with `-d` (detach),
-- we name it `postgresql`,
-- we publish the `5432` port to the host so that we may try and connect to our
-  PostgreSQL database,
+- we name it `sentry-postgresql`,
 - we setup some environment variables for the container to use to setup
-  PostgreSQL and the database.
+  PostgreSQL and the database,
+- we connect the `/var/log/postgresql` directory on the container to the host',
+- we connect the `/data` directory to our dedicated volume container.
 
-If you need or if you want to test, here's how you can now connect to your
-database (you will need postgresql-client packages):
 
-```
-psql -h 127.0.0.1 -p 5432 -U sentry
-# Enter the password
-```
-
-#### 3. Run the Sentry app container
-
-Now you can run the Sentry app:
+#### 4. Run the Sentry app container
 
 ```
---COMPLETE--
-```
-
-If this is the first time, you will need to create the Sentry superuser.
-
-```
-docker run -i -t --rm --link sentry-postgresql:db rchampourlier/sentry createsuperuser
+docker run -d --name="sentry-app" -v /conf/sentry:/opt --link sentry-postgresql:db rchampourlier/sentry start http
 ```
 
 Details:
@@ -104,89 +99,34 @@ Details:
 - we name it `sentry-app`,
 - we connect the container to the PostgreSQL container, aliasing it to `db`
   (with `--link sentrypostgresql:db`): this gives the container access to
-  the PostgreSQL container's network and environment variables, which are
-  registered in the Sentry configuration file (`/opt/sentry.conf.py` in the
-  container),
-- we expose the port 9000 (Sentry app's) to have access from the host.
+  the PostgreSQL container's network and environment variables;
+- we mount the host `/conf/sentry` directory on `/opt` so that the Sentry
+  app can use the `sentry.conf.py` file on the host as its configuration.
 
 
-#### 4. Run the Nginx reverse-proxy
-
-Create the Nginx conf file for Sentry:
+If Sentry has not yet been configured with the current database, we have to
+create the Sentry superuser before being able to connect.
 
 ```
-mkdir /nginx
-mkdir /nginx/log
-mkdir /nginx/sites-enabled
-echo "
-server {
-  listen            80;
-  server_name       <your-hostname>;
-
-  proxy_set_header  Host              \$host;
-  proxy_set_header  X-Real-IP         \$remote_addr;
-  proxy_set_header  X-Forwarded-For   \$proxy_add_x_forwarded_for;
-  proxy_set_header  X-Forwarded-Proto \$scheme;
-  proxy_redirect    off;
-
-  # keepalive + raven.js is a disaster
-  keepalive_timeout 0;
-
-  # use very aggressive timeouts
-  proxy_read_timeout 5s;
-  proxy_send_timeout 5s;
-  send_timeout 5s;
-  resolver_timeout 5s;
-  client_body_timeout 5s;
-
-  # buffer larger messages
-  client_max_body_size 150k;
-  client_body_buffer_size 150k;
-
-  location / {
-    proxy_pass        http://localhost:9000;
-  }
-}
-" > /nginx/sites-enabled/docker-sentry.conf
+docker run -i -t --rm --link sentry-postgresql:db rchampourlier/sentry createsuperuser
 ```
 
-Now that our Nginx configuration is ready in our `nginx-sites-enabled` directory,
-we're ready to start the Nginx container.
+
+#### 5. Run the Nginx reverse-proxy
 
 ```
-docker run -d --name=nginx -p 80:80 -p 443:443 -v /nginx/sites-enabled:/etc/nginx/sites-enabled -v /nginx/log:/var/log/nginx dockerfile/nginx
+docker run -d --name=nginx -p 80:80 -p 443:443 -v /conf/nginx:/etc/nginx/sites-templates -v /nginx/log:/var/log/nginx shepmaster/nginx-template-image
 ```
 
-#### (Bonus) Having some fun
+### Some info on the images used
 
-#### Destroying the containers... what?!
-
-What's great with Docker is that you can just trash your containers, it's OK.
-Well, as soon as your correctly using volume containers to save your data...
-
-In our case, it's OK and we can just destroy the `sentry-app` and `sentry-postgresql`
-containers and restart them, we'll be just fine!
-
-```
-docker rm -f sentry-app
-docker rm -f sentry-postgresql
-```
-
-#### Accessing the data container
-
-```
-docker run -t -i -v /var/log/postgresql -v /data --volumes-from=sentry-postgresql-data --rm ubuntu /bin/sh
-```
-
-#### Some info on the images used
-
-##### PostgreSQL
+#### PostgreSQL
 
 [rchampourlier/postgresql](https://index.docker.io/u/rchampourlier/postgresql/), a fork of [paintedfox/postgresql](https://index.docker.io/u/paintedfox/postgresql) fixing the issue when reusing data (for example when using a persistent data volume like we do).
 
-##### Sentry
+#### Sentry
 
-[rchampourlier/sentry](https://index.docker.io/u/rchampourlier/sentry/) which is a mix of 2 approaches:
+[rchampourlier/sentry](https://index.docker.io/u/rchampourlier/sentry/) is a mix of 2 inspirations:
 
 - [grue/docker-sentry](https://index.docker.io/u/grue/docker-sentry/): everything is configurable through environment variables but we'd rather use the linking feature to connect our DB.
 - [A presentation to run Sentry on Docker](iromli.github.io/tracing-err-talk/#/38), but it uses MySQL instead of PostgreSQL and was missing the spoken part.

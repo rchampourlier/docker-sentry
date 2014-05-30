@@ -1,0 +1,17 @@
+server {
+  listen            80;
+  server_name       ${HOSTNAME};
+
+  proxy_set_header  Host              $host;
+  proxy_set_header  X-Real-IP         $remote_addr;
+  proxy_set_header  X-Forwarded-For   $proxy_add_x_forwarded_for;
+  proxy_set_header  X-Forwarded-Proto $scheme;
+  proxy_redirect    off;
+
+  # keepalive + raven.js is a disaster
+  keepalive_timeout 0;
+
+  location / {
+    proxy_pass        http://${SENTRY_PORT_9000_TCP_ADDR}:${SENTRY_PORT_9000_TCP_PORT};
+  }
+}
