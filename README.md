@@ -29,8 +29,14 @@ machine through Docker-magic!
 git clone https://github.com/rchampourlier/docker-sentry.git
 cd docker-sentry
 cp -Rf conf /
-# Edit the configuration files in /conf if you need to. At least, be sure to
-# change the value of `SECRET_KEY` in `/conf/sentry/sentry.conf.py`.
+
+# Edit the configuration files in /conf. You should change:
+#   - the `server_name` (replace `sentry.example.com` with your own hostname
+#     in `/conf/nginx/sentry.conf.tmpl`,
+#   - in `/conf/sentry/sentry.conf.py`:
+#     - the `SECRET_KEY` (you may use [this site](http://www.miniwebtool.com/django-secret-key-generator/))
+#       to generate a Django key,
+#     - the `SENTRY_URL_PREFIX` (again, replace `sentry.example.com`).
 
 # Dependencies
 apt-get install pwgen -y

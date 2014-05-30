@@ -87,7 +87,7 @@ DATABASES = {
 ################
 
 # You MUST configure the absolute URI root for Sentry:
-SENTRY_URL_PREFIX = "http://localhost:9000" # No trailing slash!
+SENTRY_URL_PREFIX = "http://sentry.example.com" # No trailing slash!
 
 # If you're using a reverse proxy, you should enable the X-Forwarded-Proto
 # and X-Forwarded-Host headers, and uncomment the following settings
@@ -130,7 +130,7 @@ SERVER_EMAIL = 'root@localhost'
 
 # If this file ever becomes compromised, it's important to regenerate your SECRET_KEY
 # Changing this value will result in all current sessions being invalidated
-SECRET_KEY = '7fBVacWgA6IaY8zh3cljzToS+ZdrwGBdakqfEfFgs0PpTApfUxlYaA=='
+SECRET_KEY = 'REPLACEME'
 
 # http://twitter.com/apps/new
 # It's important that input a callback URL, even if its useless. We have no idea why, consult Twitter.
