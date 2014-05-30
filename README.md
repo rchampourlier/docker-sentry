@@ -38,7 +38,7 @@ to the next chapter before running this in your terminal!
 ```
 docker run -v /var/log/postgresql -v /data --name sentry-postgresql-data busybox true
 docker run -d --name="sentry-postgresql" -e USER="sentry" -e DB="sentry" -e PASS="$(pwgen -s -1 16)" --volumes-from=sentry-postgresql-data rchampourlier/postgresql
-docker run -d --name "sentry-app" -e HOST="<your-hostname>" -e URL_PREFIX="http://<your-hostname>" -p 127.0.0.1:9000:9000 --link sentry-postgresql:db rchampourlier/sentry start http
+docker run -d --name "sentry-app" -e URL_PREFIX="http://<your-hostname>" -p 127.0.0.1:9000:9000 --link sentry-postgresql:db rchampourlier/sentry start http
 
 # Create Sentry super-user (only the first time)
 docker run -i -t --rm --link sentry-postgresql:db rchampourlier/sentry createsuperuser
