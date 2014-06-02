@@ -48,7 +48,7 @@ docker run -d --name="sentry-app" -v /conf/sentry:/opt --link sentry-postgresql:
 # The first time, we create the Sentry superuser
 docker run -i -t --rm --link sentry-postgresql:db rchampourlier/sentry createsuperuser
 
-docker run -d --name=nginx -p 80:80 -p 443:443 -v /conf/nginx:/etc/nginx/sites-templates -v /nginx/log:/var/log/nginx --link sentry-app:sentry shepmaster/nginx-template-image
+docker run -d --name=nginx -p 80:80 -p 443:443 -v /conf/nginx/www:/var/www -v /conf/nginx/sites-templates:/etc/nginx/sites-templates -v /var/log/containers/nginx:/var/log/nginx --link sentry-app:sentry shepmaster/nginx-template-image
 ```
 
 
