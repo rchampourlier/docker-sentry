@@ -125,7 +125,7 @@ docker run -i -t --rm --link sentry-postgresql:db rchampourlier/sentry createsup
 #### 5. Run the Nginx reverse-proxy
 
 ```
-docker run -d --name=nginx -p 80:80 -p 443:443 -v /conf/nginx:/etc/nginx/sites-templates -v /nginx/log:/var/log/nginx shepmaster/nginx-template-image
+docker run -d --name=nginx -p 80:80 -p 443:443 -v /conf/nginx/www:/var/www -v /conf/nginx/sites-templates:/etc/nginx/sites-templates -v /var/log/containers/nginx:/var/log/nginx --link sentry-app:sentry shepmaster/nginx-template-image
 ```
 
 ### Some info on the images used
