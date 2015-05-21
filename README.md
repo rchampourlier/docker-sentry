@@ -121,11 +121,26 @@ create the Sentry superuser before being able to connect.
 docker run -i -t --rm --link sentry-postgresql:db rchampourlier/sentry createsuperuser
 ```
 
-
 #### 5. Run the Nginx reverse-proxy
 
 ```
 docker run -d --name=nginx -p 80:80 -p 443:443 -v /conf/nginx/www:/var/www -v /conf/nginx/sites-templates:/etc/nginx/sites-templates -v /var/log/containers/nginx:/var/log/nginx --link sentry-app:sentry shepmaster/nginx-template-image
+```
+
+### Maintenance
+
+You should regularly cleanup your Sentry DB, otherwise it may get a bit too big... Let's do this by cleaning the entries more than 360-day old:
+
+```
+docker run --name="sentry-app-cleanup" -v /conf/sentry:/opt --link sentry-postgresql:db rchampourlier/sentry cleanup --days 360
+```
+
+### Troubleshooting
+
+If you need to inspect the `sentry-app` container because something's wrong, run this:
+
+```
+docker run -i -t --entrypoint=/bin/sh --name="sentry-app" -v /conf/sentry:/opt --link sentry-postgresql:db rchampourlier/sentry -c bash
 ```
 
 ### Some info on the images used
